@@ -37,3 +37,8 @@ void ATP_SingleBlock::Tick(float DeltaTime)
 
 }
 
+void ATP_SingleBlock::ShiftBlock(const int& Amount)
+{
+	AddActorWorldOffset(FVector(0.f, 0.f, -Amount * CubeHeight));
+}
+

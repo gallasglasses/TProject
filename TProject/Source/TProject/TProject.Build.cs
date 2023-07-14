@@ -17,12 +17,13 @@ public class TProject : ModuleRules
 				"EnhancedInput"
             });
 
-		//PublicIncludePaths.AddRange(new string[] 
-		//{
-		//	"EnhancedInput/Public"
-		//});
+		PublicIncludePaths.AddRange(new string[]
+		{
+			"EnhancedInput/Public",
+            "TProject/Public/"
+        });
 
-        PrivateDependencyModuleNames.AddRange(new string[] {  });
+		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
 		// Uncomment if you are using Slate UI
 		PrivateDependencyModuleNames.AddRange(new string[] 

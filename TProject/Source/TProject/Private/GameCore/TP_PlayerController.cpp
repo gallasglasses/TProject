@@ -10,8 +10,6 @@
 void ATP_PlayerController::BeginPlay()
 {
     Super::BeginPlay();
-
-    FallingBlock = Cast<ATP_FallingBlock>(GetPawn());
 }
 
 // Called to bind functionality to input
@@ -27,40 +25,19 @@ void ATP_PlayerController::SetupInputComponent()
 
     PawnMappingContext = NewObject<UInputMappingContext>(this);
 
-    MoveAction = NewObject<UInputAction>(this);
+    /*MoveAction = NewObject<UInputAction>(this);
     MoveAction->ValueType = EInputActionValueType::Axis3D;
+    PawnMappingContext->MapKey(MoveAction, EKeys::S);*/
 
-    PawnMappingContext->MapKey(MoveAction, EKeys::W);
-}
+    RotateAction = NewObject<UInputAction>(this);
+    PawnMappingContext->MapKey(RotateAction, EKeys::W);
 
-void ATP_PlayerController::Rotate()
-{
-    if (FallingBlock)
-    {
-        FallingBlock->Rotate();
-    }
-}
+    MoveRightAction = NewObject<UInputAction>(this);
+    PawnMappingContext->MapKey(MoveRightAction, EKeys::D);
 
-void ATP_PlayerController::Speed()
-{
-    if (FallingBlock)
-    {
-        FallingBlock->Speed();
-    }
-}
+    MoveLeftAction = NewObject<UInputAction>(this);
+    PawnMappingContext->MapKey(MoveLeftAction, EKeys::A);
 
-void ATP_PlayerController::MoveLeft()
-{
-    if (FallingBlock)
-    {
-        FallingBlock->MoveLeft();
-    }
-}
-
-void ATP_PlayerController::MoveRight()
-{
-    if (FallingBlock)
-    {
-        FallingBlock->MoveRight();
-    }
+    SpeedAction = NewObject<UInputAction>(this);
+    PawnMappingContext->MapKey(SpeedAction, EKeys::S);
 }

@@ -25,17 +25,19 @@ public:
 	UPROPERTY()
 	UInputMappingContext* PawnMappingContext;
 
-	UPROPERTY()
-	UInputAction* MoveAction;
-
-private:
+	/*UPROPERTY()
+	UInputAction* MoveAction;*/
 
 	UPROPERTY()
-		ATP_FallingBlock* FallingBlock;
+	UInputAction* MoveRightAction;
 
-	void Rotate();
-	void Speed();
-	void MoveLeft();
-	void MoveRight();
+	UPROPERTY()
+	UInputAction* MoveLeftAction;
+
+	UPROPERTY()
+	UInputAction* RotateAction;
+
+	UPROPERTY()
+	UInputAction* SpeedAction;
 	
 };

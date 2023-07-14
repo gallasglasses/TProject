@@ -9,9 +9,10 @@
 
 class USceneComponent;
 class UStaticMeshComponent;
-class UFloatingPawnMovement;
 
 class ATP_SingleBlock;
+
+DECLARE_MULTICAST_DELEGATE(FOnTheBottom);
 
 UENUM(BlueprintType)
 enum class ETPBlockShape : uint8
@@ -58,15 +59,18 @@ protected:
 		FVector SpawnNewFallingBlockLocation = FVector(0.f, 0.f, 1000.f);
 
 	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
+		FVector BoxOverlapExtent = FVector(1.f, 1.f, 1.f);
+
+	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
 		float CubeHeight = 50.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	/*UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block")
 		TSubclassOf<ATP_SingleBlock> SingleBlockClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-		TSubclassOf<ATP_FallingBlock> NewFallingBlockClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block")
+		TSubclassOf<ATP_FallingBlock> NewFallingBlockClass;*/
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Cube | Color")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block | Color")
 		TMap<ETPBlockShape, FLinearColor> BlockColors{
 			{ ETPBlockShape::O_block, FLinearColor(FVector(1.f, 1.f, 0.f)) },
 			{ ETPBlockShape::I_block, FLinearColor(FVector(0.f, 0.f, 1.f)) },
@@ -77,7 +81,7 @@ protected:
 			{ ETPBlockShape::T_block, FLinearColor(FVector(0.1f, 0.f, 0.5f)) }
 		};
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Cube | Number")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block | Number")
 		TMap<int, ETPBlockShape> BlockNumbers{
 			{ 0, ETPBlockShape::O_block },
 			{ 1, ETPBlockShape::I_block },
@@ -90,13 +94,6 @@ protected:
 	
 	const FString CubeMeshPath = "/Script/Engine.StaticMesh'/Engine/VREditor/BasicMeshes/SM_Cube_01.SM_Cube_01'";
 
-#pragma region /** Input */
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input")
-		class UInputMappingContext* InputMapping;
-
-#pragma endregion
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -104,21 +101,19 @@ public:
 	/** Allows a Pawn to set up custom input bindings. Called upon possession by a PlayerController, using the InputComponent created by CreatePlayerInputComponent(). */
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
-	void Move(const struct FInputActionValue& ActionValue);
-
 	UFUNCTION()
 		void OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent,
 			AActor* OtherActor, UPrimitiveComponent* OtherComp,
 			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	UPROPERTY(EditAnywhere)
-		UFloatingPawnMovement* Movement;
+	FOnTheBottom OnTheBottom;
 
-	UPROPERTY(EditAnywhere)
-		float MoveScale;
+	void SetBlockShapeNumber(const int& Number) { BlockShapeNumber = Number; }
+	void SetIsNextBlock(const bool& IsNext) { bIsNextBlock = IsNext; }
 
 	void Rotate();
 	void Speed();
+	void StopSpeed();
 	void MoveLeft();
 	void MoveRight();
 
@@ -126,8 +121,13 @@ private:
 
 	FTimerHandle DropingBlockTimer;
 	FLinearColor BlockColor;
+
+	int BlockShapeNumber;
 	float TimeToDropBlock = 0.5f;
-	bool bShouldDrop = false;
+
+	bool bIsNextBlock = false;
 
 	void DropBlock();
+
+	bool CheckTrace(const FVector& DirectionToCheck, const bool& IsDropBlock);
 };

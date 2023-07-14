@@ -2,15 +2,12 @@
 
 
 #include "GameCore/TP_FallingBlock.h"
-#include "GameCore/TP_PlayerController.h"
 #include "GameCore/TP_SingleBlock.h"
 
-
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "GameFramework/FloatingPawnMovement.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFallingBlock, All, All);
 
@@ -26,7 +23,7 @@ ATP_FallingBlock::ATP_FallingBlock()
 	Cube1 = CreateDefaultSubobject<UStaticMeshComponent>("Cube1");
 	Cube1->SetupAttachment(DefaultScene);
 	Cube1->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Cube1->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	Cube1->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap); //ECR_Overlap ECR_Block
 	//Cube1->SetCollisionProfileName("OverlapAll");
 	//Cube1->SetCollisionProfileName("BlockAll");
 
@@ -59,9 +56,6 @@ ATP_FallingBlock::ATP_FallingBlock()
 		Cube3->SetStaticMesh(CubeMeshTemp);
 		Cube4->SetStaticMesh(CubeMeshTemp);
 	}
-	
-	Movement = CreateDefaultSubobject<UFloatingPawnMovement>("Movement");
-	MoveScale = 1.f;
 }
 
 // Called when the game starts or when spawned
@@ -69,8 +63,8 @@ void ATP_FallingBlock::BeginPlay()
 {
 	Super::BeginPlay();
 
-	const auto RandNumber = FMath::RandRange(0, 6);
-	switch (RandNumber)
+	//const auto RandNumber = FMath::RandRange(0, 6);
+	switch (BlockShapeNumber)
 	{
 		// O-block
 	case 0:
@@ -83,9 +77,9 @@ void ATP_FallingBlock::BeginPlay()
 
 		// I-block
 	case 1:
-		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
-		Cube3->AddLocalOffset(FVector(0.f, 0.f, 2* CubeHeight));
-		Cube4->AddLocalOffset(FVector(0.f, 0.f, 3* CubeHeight));
+		Cube2->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
+		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
+		Cube4->AddLocalOffset(FVector(0.f, 2 * CubeHeight, 0.f));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("1: I-block"));
 		break;
@@ -110,27 +104,27 @@ void ATP_FallingBlock::BeginPlay()
 
 		// L-block
 	case 4:
-		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
-		Cube3->AddLocalOffset(FVector(0.f, 0.f, 2* CubeHeight));
-		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
+		Cube2->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
+		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
+		Cube4->AddLocalOffset(FVector(0.f, -CubeHeight, -CubeHeight));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("4: L-block"));
 		break;
 
 		// J-block
 	case 5:
-		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
-		Cube3->AddLocalOffset(FVector(0.f, 0.f, 2* CubeHeight));
-		Cube4->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
+		Cube2->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
+		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
+		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, -CubeHeight));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("5: J-block"));
 		break;
 
 		// T-block
 	case 6:
-		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
-		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, CubeHeight));
-		Cube4->AddLocalOffset(FVector(0.f, -CubeHeight, CubeHeight));
+		Cube2->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
+		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
+		Cube4->AddLocalOffset(FVector(0.f, 0.f, -CubeHeight));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("6: T-block"));
 		break;
@@ -139,20 +133,22 @@ void ATP_FallingBlock::BeginPlay()
 		break;
 	}
 
-	BlockColor = *BlockColors.Find(*BlockNumbers.Find(RandNumber));
+	BlockColor = *BlockColors.Find(*BlockNumbers.Find(BlockShapeNumber));
 
 	Cube1->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 	Cube2->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 	Cube3->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 	Cube4->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 
-	Cube1->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	Cube2->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	Cube3->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	Cube4->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
+	//Cube1->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
+	//Cube2->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
+	//Cube3->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
+	//Cube4->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
 
-	GetWorldTimerManager().SetTimer(DropingBlockTimer, this, &ATP_FallingBlock::DropBlock, TimeToDropBlock, true);
-
+	if (!bIsNextBlock)
+	{
+		GetWorldTimerManager().SetTimer(DropingBlockTimer, this, &ATP_FallingBlock::DropBlock, TimeToDropBlock, true);
+	}
 }
 
 // Called every frame
@@ -165,26 +161,6 @@ void ATP_FallingBlock::Tick(float DeltaTime)
 void ATP_FallingBlock::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-	ATP_PlayerController* PC = Cast<ATP_PlayerController>(Controller);
-	check(EIC && PC);
-
-	EIC->BindAction(PC->MoveAction, ETriggerEvent::Triggered, this, &ATP_FallingBlock::Move);
-	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
-	check(LocalPlayer);
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-	check(Subsystem);
-
-	Subsystem->ClearAllMapings();
-	Subsystem->AddMappingContext(PC->PawnMappingContext, 0);
-}
-
-void ATP_FallingBlock::Move(const FInputActionValue& ActionValue)
-{
-	FVector Input = ActionValue.Get<FInputActionValue::Axis3D>();
-	AddMovementInput(GetActorRotation().RotateVector(Input), MoveScale);
 }
 
 void ATP_FallingBlock::OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -199,26 +175,114 @@ void ATP_FallingBlock::OnComponentBeginOverlap(UPrimitiveComponent* OverlappedCo
 
 void ATP_FallingBlock::Rotate()
 {
-	AddActorLocalRotation(FRotator(90.f, 0.f, 0.f));
+	if (!GetWorld()) return;
+	if (BlockShapeNumber == 0) return; // O-shape no need to turn
+
+	AddActorLocalRotation(FRotator(0.f, 0.f, 90.f));
+
+	TArray<USceneComponent*> Childrens;
+	DefaultScene->GetChildrenComponents(false, Childrens);
+	for (auto Child : Childrens)
+	{
+		if (!Cast<UStaticMeshComponent>(Child))
+		{
+			UE_LOG(LogFallingBlock, Display, TEXT("continue"));
+			continue;
+		}
+		TArray<TEnumAsByte<EObjectTypeQuery> > ObjectTypesArray;
+		ObjectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+		TArray<AActor*> ActorsToIgnore {GetOwner()};
+		TArray<AActor*> OutArray;
+
+		if (UKismetSystemLibrary::BoxOverlapActors(GetWorld(), Child->GetComponentLocation(), BoxOverlapExtent, ObjectTypesArray, AActor::StaticClass(), ActorsToIgnore, OutArray))
+		{
+			AddActorLocalRotation(FRotator(0.f, 0.f, -90.f));
+
+			UE_LOG(LogFallingBlock, Display, TEXT("unrotate & break"));
+			break;
+		}
+		UE_LOG(LogFallingBlock, Display, TEXT("all clear"));
+	}
 }
 
 void ATP_FallingBlock::Speed()
 {
-	
+	//this->CustomTimeDilation = 5.f;
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 5.f);
+}
+
+void ATP_FallingBlock::StopSpeed()
+{
+	//this->CustomTimeDilation = 1.f;
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.f);
 }
 
 void ATP_FallingBlock::MoveLeft()
 {
-	
+	if (CheckTrace(FVector(0.f, CubeHeight, 0.f), false))
+	{
+		AddActorWorldOffset(FVector(0.f, -CubeHeight, 0.f));
+	}
 }
 
 void ATP_FallingBlock::MoveRight()
 {
+	if (CheckTrace(FVector(0.f, -CubeHeight, 0.f), false))
+	{
+		AddActorWorldOffset(FVector(0.f, CubeHeight, 0.f));
+	}
 }
 
 void ATP_FallingBlock::DropBlock()
 {
-	bShouldDrop = true;
+	if (!GetWorld()) return;
+
+	if (!bIsNextBlock)
+	{
+		if (CheckTrace(FVector(0.f, 0.f, CubeHeight), true))
+		{
+			AddActorWorldOffset(FVector(0.f, 0.f, -CubeHeight));
+		}
+		else
+		{
+			TArray<USceneComponent*> Childrens;
+			DefaultScene->GetChildrenComponents(false, Childrens);
+			for (auto Child : Childrens)
+			{
+				//UE_LOG(LogFallingBlock, Display, TEXT("Child"));
+
+				const FTransform SpawnTransform(FRotator::ZeroRotator, Child->GetComponentLocation(), FVector::OneVector);
+				FActorSpawnParameters SpawnParameters;
+				SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+				const auto SingleBlock = GetWorld()->SpawnActorDeferred<ATP_SingleBlock>(ATP_SingleBlock::StaticClass(), SpawnTransform); //ATP_SingleBlock::StaticClass()
+				if (SingleBlock)
+				{
+					SingleBlock->SetBlockColor(BlockColor);
+					SingleBlock->SetOwner(GetOwner());
+					SingleBlock->FinishSpawning(SpawnTransform);
+
+					//UE_LOG(LogFallingBlock, Display, TEXT("SingleBlock FinishSpawning"));
+				}
+			}
+
+			/*FRotator SpawnRotation = FRotator::ZeroRotator;
+			FActorSpawnParameters SpawnParameters;
+
+			auto NewFallingBlock = GetWorld()->SpawnActor<ATP_FallingBlock>(SpawnNewFallingBlockLocation, SpawnRotation, SpawnParameters);*/
+
+			OnTheBottom.Broadcast();
+
+			Destroy();
+		}
+	}
+}
+
+bool ATP_FallingBlock::CheckTrace(const FVector& DirectionToCheck, const bool& IsDropBlock)
+{
+	if (!GetWorld()) return false;
+
+	bool bShouldDo = true;
 	TArray<USceneComponent*> Childrens;
 	DefaultScene->GetChildrenComponents(false, Childrens);
 	for (auto Child : Childrens)
@@ -226,46 +290,19 @@ void ATP_FallingBlock::DropBlock()
 		FHitResult OutHit;
 
 		const auto Start = Child->GetComponentLocation();
-		const auto End = Start - FVector(0.f, 0.f, CubeHeight);
+		const auto End = Start - DirectionToCheck;
 		FCollisionQueryParams Params = FCollisionQueryParams::DefaultQueryParam; // ignore self?
-		
+
 		if (GetWorld()->LineTraceSingleByObjectType(OutHit, Start, End, ECollisionChannel::ECC_WorldStatic, Params))
 		{
-			bShouldDrop = false;
-			GetWorldTimerManager().ClearTimer(DropingBlockTimer);
-		}
-	}
-
-	if (bShouldDrop)
-	{
-		AddActorWorldOffset(FVector(0.f, 0.f, -CubeHeight));
-	}
-	else
-	{
-		DefaultScene->GetChildrenComponents(false, Childrens);
-		for (auto Child : Childrens)
-		{
-			UE_LOG(LogFallingBlock, Display, TEXT("Child"));
-			const auto SpawnSingleBlockLocation = Child->GetComponentLocation();
-
-			const FTransform SpawnTransform(FRotator::ZeroRotator, Child->GetComponentLocation(), FVector::OneVector);
-			FActorSpawnParameters SpawnParameters;
-			SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-			const auto SingleBlock = GetWorld()->SpawnActorDeferred<ATP_SingleBlock>(ATP_SingleBlock::StaticClass(), SpawnTransform); //ATP_SingleBlock::StaticClass()
-			if (SingleBlock)
+			bShouldDo = false;
+			if (IsDropBlock)
 			{
-				SingleBlock->SetBlockColor(BlockColor);
-				SingleBlock->SetOwner(GetOwner());
-				SingleBlock->FinishSpawning(SpawnTransform);
-
-				UE_LOG(LogFallingBlock, Display, TEXT("SingleBlock FinishSpawning"));
+				GetWorldTimerManager().ClearTimer(DropingBlockTimer);
 			}
 		}
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-		FActorSpawnParameters SpawnParameters;
-
-		auto NewFallingBlock = GetWorld()->SpawnActor<ATP_FallingBlock>(SpawnNewFallingBlockLocation, SpawnRotation, SpawnParameters);
-		Destroy();
 	}
+
+	return bShouldDo;
 }
 

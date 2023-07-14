@@ -24,11 +24,15 @@ protected:
 
 	const FString CubeMeshPath = "/Script/Engine.StaticMesh'/Engine/VREditor/BasicMeshes/SM_Cube_01.SM_Cube_01'";
 
+	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
+		float CubeHeight = 50.f;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	void SetBlockColor(const FLinearColor& Color) { BlockColor = Color; }
+	void ShiftBlock(const int& Amount);
 
 private:
 
