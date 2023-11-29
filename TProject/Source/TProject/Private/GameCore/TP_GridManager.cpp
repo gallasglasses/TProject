@@ -3,6 +3,7 @@
 
 #include "GameCore/TP_GridManager.h"
 #include "GameCore/TP_LineCheckBox.h"
+#include "GameCore/TP_PlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogGridManager, All, All);
 
@@ -30,8 +31,8 @@ void ATP_GridManager::BeginPlay()
 
 	NextBoxSpawnPoint = FirstBoxSpawnPoint;
 	
-	int j = 0;
-	for (int i = 0; i < GridBoxesAmount; i++)
+	int32 j = 0;
+	for (int32 i = 0; i < GridBoxesAmount; i++)
 	{	
 		if (i == (j + 1) * 10)
 		{
@@ -42,27 +43,18 @@ void ATP_GridManager::BeginPlay()
 		if (i < (j+1) * 10)
 		{
 			const FTransform SpawnTransform(FRotator::ZeroRotator, NextBoxSpawnPoint, FVector::OneVector);
-			//FActorSpawnParameters SpawnParameters;
-			//SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 			ATP_LineCheckBox* LineCheckBox = GetWorld()->SpawnActorDeferred<ATP_LineCheckBox>(ATP_LineCheckBox::StaticClass(), SpawnTransform);
 			if (LineCheckBox)
 			{
 				LineCheckBox->SetBoxIndex(i);
 				LineCheckBox->SetOwner(this);
 				LineCheckBox->FinishSpawning(SpawnTransform);
-
-				//UE_LOG(LogGridManager, Display, TEXT("GetOwner()->GetName() %s"), *this->GetName());
 			}
 
 			BoxesGrid.Add(LineCheckBox);
-			//LineCheckBox->OnBoxFulled.AddUObject(this, &ATP_GridManager::OnBoxFulled);
-			//LineCheckBox->OnDeleteBlock.AddUObject(this, &ATP_GridManager::OnDeleteBlock);
 			NextBoxSpawnPoint.Y += BoxSpawnStep;
 		}
-		
 	}
-
-	UE_LOG(LogGridManager, Display, TEXT("LineCheckBoxes.Num() %i"), BoxesGrid.Num());
 }
 
 // Called every frame
@@ -80,10 +72,10 @@ void ATP_GridManager::CheckGridRaws(ETPBlockState State)
 	{
 		UE_LOG(LogGridManager, Display, TEXT("BlockFalled"));
 
-		int j = 0;
-		int BoxesCount = 0;
+		int32 j = 0;
+		int32 BoxesCount = 0;
 
-		for (int i = 0; i < GridBoxesAmount; )
+		for (int32 i = 0; i < GridBoxesAmount; )
 		{
 			if (BoxesGrid[i]->GetIsFulled())
 			{
@@ -102,6 +94,7 @@ void ATP_GridManager::CheckGridRaws(ETPBlockState State)
 			}
 			else
 			{
+
 				BoxesCount = 0;
 				j++;
 				i = j * 10;
@@ -109,15 +102,21 @@ void ATP_GridManager::CheckGridRaws(ETPBlockState State)
 		}
 
 		j = 0;
-		int CountShiftStep = 0;
-
+		int32 CountShiftStep = 0;
+		
 		if (!FulledRawsIndexes.IsEmpty())
 		{
-			for (int i = 0; i < GridBoxesAmount; i++)
+			for (int i = 0; i < FulledRawsIndexes.Num(); i++)
+			{
+				UE_LOG(LogGridManager, Display, TEXT("FulledRawsIndexes [%d] : %d"), i, FulledRawsIndexes[i]);
+			}
+			for (int32 i = 0; i < GridBoxesAmount; i++)
 			{
 				if (FulledRawsIndexes.Contains(j))
 				{
 					BoxesGrid[i]->SetNeedDelete(true);
+					UE_LOG(LogGridManager, Display, TEXT("BoxesGrid [%d] : DELETE "), i);
+
 					BoxesGrid[i]->DeleteBlock();
 					BoxesCount++;
 					if (BoxesCount < 10)
@@ -149,31 +148,72 @@ void ATP_GridManager::CheckGridRaws(ETPBlockState State)
 					}
 				}
 			}
+
+			GetWorldTimerManager().SetTimer(ChangeGridTimer, this, &ATP_GridManager::ChangeGrid, TimeToChangeGrid, false);
 		}
-
-		ChangeGrid();
-
-		if (GetWorld())
+		else
 		{
+			UE_LOG(LogGridManager, Display, TEXT("FulledRawsIndexes IS EMPTY"));
+			if (!GetWorld()) return;
 			const auto GameMode = Cast<ATProjectGameModeBase>(GetWorld()->GetAuthGameMode());
-			if (GameMode)
-			{
-				GameMode->SetBlockState(ETPBlockState::BlockFalling);
-			}
+			if (!GameMode) return;
+
+			GameMode->SetBlockState(ETPBlockState::BlockFalling);
 		}
 	}
 }
 
 void ATP_GridManager::ChangeGrid()
 {
-	for (int i = 0; i < GridBoxesAmount; i++)
+	GetWorldTimerManager().ClearTimer(ChangeGridTimer);
+
+	for (int32 i = 0; i < GridBoxesAmount; i++)
 	{
 		if (BoxesGrid[i]->GetIsFulled())
 		{
+			UE_LOG(LogGridManager, Display, TEXT("BoxesGrid [%d] : SHIFT "), i);
 			BoxesGrid[i]->ShiftBlock();
 		}
 	}
 
+	if (!GetWorld()) return;
+	const auto GameMode = Cast<ATProjectGameModeBase>(GetWorld()->GetAuthGameMode());
+	if (!GameMode) return;
+
+	const auto PC = Cast<ATP_PlayerController>(GetWorld()->GetFirstPlayerController());
+	if (!PC) return;
+
+	int32 Score = 0;
+	switch (FulledRawsIndexes.Num())
+	{
+	case 0:
+		break;
+
+	case 1:
+		Score = 40;
+		break;
+
+	case 2:
+		Score = 100;
+		break;
+
+	case 3:
+		Score = 300;
+		break;
+
+	case 4:
+		Score = 1200;
+		break;
+
+	default:
+		break;
+	}
+
+	GameMode->SetScore(PC, Score);
+	GameMode->SetLines(PC, FulledRawsIndexes.Num());
+
 	FulledRawsIndexes.Empty();
+
+	GameMode->SetBlockState(ETPBlockState::BlockFalling);
 }
 

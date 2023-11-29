@@ -9,7 +9,9 @@
 class UBoxComponent;
 class USceneComponent;
 class ATP_SingleBlock;
-class UParticleSystem;
+
+class UNiagaraSystem;
+class UNiagaraComponent;
 
 //DECLARE_MULTICAST_DELEGATE_OneParam(FOnBoxFulledSignature, int);
 //DECLARE_MULTICAST_DELEGATE(FOnDeletedBlockSignature);
@@ -38,14 +40,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "LineBox")
 		TSubclassOf<ATP_SingleBlock> SingleBlockClass;
 
-	UPROPERTY(EditDefaultsOnly, Category = "LineBox")
-		UParticleSystem* ExplosionEmitter;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LineBox")
 		FVector BoxExtent = FVector(5.f, 5.f, 5.f);
 
 	UPROPERTY(EditAnywhere, Category = "LineBox")
-		int BoxIndex;
+		int32 BoxIndex;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components | VFX")
+		UNiagaraComponent* DestroyNiagaraComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components | VFX")
+		UNiagaraSystem* DestroyNiagaraEffect;
+
+	const FString DestroyNiagaraEffectPath = "Niagara.NiagaraSystem'/Game/TProjectContent/FX/NS_DestroyCubeFX.NS_DestroyCubeFX'";
 
 public:	
 	// Called every frame
@@ -57,20 +64,27 @@ public:
 	void ShiftBlock();
 	void DeleteBlock();
 
-	void SetBoxIndex(const int& Index) { BoxIndex = Index; };
-	void SetShiftAmount(const int& Amount) { BlockShiftAmount = Amount; };
+	void SetBoxIndex(const int32& Index) { BoxIndex = Index; };
+	void SetShiftAmount(const int32& Amount) { BlockShiftAmount = Amount; };
 	void SetNeedDelete(const bool& NeedDeleteBlock) { bNeedDeleteBlock = NeedDeleteBlock; };
 
-	const int& GetBoxIndex() const { return BoxIndex; };
+	const int32& GetBoxIndex() const { return BoxIndex; };
 	const bool& GetIsFulled() const { return bIsFulled; };
+
+	bool IsBlockOnSpot(const ATP_SingleBlock* Block) const;
 
 private:
 
+	void DestroyBlock();
+
 	ATP_SingleBlock* SingleBLock;
 
-	int BlockShiftAmount = 0;
+	FTimerHandle DestroyBlockTimer;
+
+	int32 BlockShiftAmount = 0;
+
+	float TimeDestroyBlock = 5.f;
 
 	bool bNeedDeleteBlock = false;
 	bool bIsFulled = false;
-
 };

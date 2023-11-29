@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "TProjectGameModeBase.h"
 #include "TP_PlayerController.generated.h"
 
 class ATP_FallingBlock;
+class ATP_CameraPawn;
 
 class UInputMappingContext;
 class UInputAction;
@@ -39,5 +41,25 @@ public:
 
 	UPROPERTY()
 	UInputAction* SpeedAction;
+
+	UPROPERTY()
+	UInputAction* PauseAction;
+
+private:
+
+	UPROPERTY()
+		ATP_CameraPawn* TP_Pawn;
+
+	void Rotate();
+	void MoveRight();
+	void MoveLeft();
+	void Speed();
+	void StopRotate();
+	void StopMoveRight();
+	void StopMoveLeft();
+	void StopSpeed();
+
+	void OnPauseGame();
+	void OnMatchStateChanged(ETPMatchState State);
 	
 };

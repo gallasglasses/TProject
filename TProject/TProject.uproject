@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.2",
+	"EngineAssociation": "{AD7F9E73-4BFA-B4A7-1529-718DE9F32E93}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -9,7 +9,8 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"Engine"
+				"Engine",
+				"UMG"
 			]
 		}
 	],
@@ -24,6 +25,15 @@
 		{
 			"Name": "EnhancedInput",
 			"Enabled": true
+		},
+		{
+			"Name": "NiagaraUIRenderer",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/fd24d23ca57b4c59a4e4b7368da250bd",
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Android"
+			]
 		}
 	]
 }

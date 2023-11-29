@@ -14,13 +14,17 @@ public class TProject : ModuleRules
 				"CoreUObject", 
 				"Engine", 
 				"InputCore",
-				"EnhancedInput"
+				"EnhancedInput",
+                "Niagara"
             });
 
 		PublicIncludePaths.AddRange(new string[]
 		{
-			"EnhancedInput/Public",
-            "TProject/Public/"
+			//"EnhancedInput/Public",
+            "TProject/Public/",
+            "TProject/Public/GameCore/",
+            "TProject/Public/UI/",
+            "TProject/Public/UI/MenuUI/"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
@@ -30,7 +34,8 @@ public class TProject : ModuleRules
 		{ 
 			"Slate",
 			"SlateCore",
-            "EnhancedInput"
+            "EnhancedInput",
+            "Niagara"
         });
 		
 		// Uncomment if you are using online features

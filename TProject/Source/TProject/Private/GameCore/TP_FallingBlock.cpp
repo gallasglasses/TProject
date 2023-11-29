@@ -3,11 +3,14 @@
 
 #include "GameCore/TP_FallingBlock.h"
 #include "GameCore/TP_SingleBlock.h"
+#include "TProjectGameModeBase.h"
 
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFallingBlock, All, All);
 
@@ -23,30 +26,22 @@ ATP_FallingBlock::ATP_FallingBlock()
 	Cube1 = CreateDefaultSubobject<UStaticMeshComponent>("Cube1");
 	Cube1->SetupAttachment(DefaultScene);
 	Cube1->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	Cube1->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap); //ECR_Overlap ECR_Block
-	//Cube1->SetCollisionProfileName("OverlapAll");
-	//Cube1->SetCollisionProfileName("BlockAll");
+	Cube1->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 
 	Cube2 = CreateDefaultSubobject<UStaticMeshComponent>("Cube2");
 	Cube2->SetupAttachment(DefaultScene);
 	Cube2->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Cube2->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-	//Cube2->SetCollisionProfileName("OverlapAll");
-	//Cube2->SetCollisionProfileName("BlockAll");
 
 	Cube3 = CreateDefaultSubobject<UStaticMeshComponent>("Cube3");
 	Cube3->SetupAttachment(DefaultScene);
 	Cube3->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Cube3->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-	//Cube3->SetCollisionProfileName("OverlapAll");
-	//Cube3->SetCollisionProfileName("BlockAll");
 
 	Cube4 = CreateDefaultSubobject<UStaticMeshComponent>("Cube4");
 	Cube4->SetupAttachment(DefaultScene);
 	Cube4->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Cube4->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
-	//Cube4->SetCollisionProfileName("OverlapAll");
-	//Cube4->SetCollisionProfileName("BlockAll");
 
 	UStaticMesh* CubeMeshTemp = LoadObject<UStaticMesh>(this, *CubeMeshPath);
 	if (CubeMeshTemp)
@@ -56,6 +51,11 @@ ATP_FallingBlock::ATP_FallingBlock()
 		Cube3->SetStaticMesh(CubeMeshTemp);
 		Cube4->SetStaticMesh(CubeMeshTemp);
 	}
+
+	DropNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>("DropNiagaraComponent");
+	DropNiagaraComponent->SetupAttachment(Cube1);
+
+	DropNiagaraEffect = LoadObject<UNiagaraSystem>(this, *DropNiagaraEffectPath);
 }
 
 // Called when the game starts or when spawned
@@ -63,7 +63,6 @@ void ATP_FallingBlock::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//const auto RandNumber = FMath::RandRange(0, 6);
 	switch (BlockShapeNumber)
 	{
 		// O-block
@@ -71,6 +70,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
 		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, CubeHeight));
+
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, 0.5f, -0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, -0.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, -0.5f, -0.5f));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("0: O-block"));
 		break;
@@ -81,6 +84,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, 2 * CubeHeight, 0.f));
 
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, 1.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, -0.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, -1.5f, 0.5f));
+
 		UE_LOG(LogFallingBlock, Display, TEXT("1: I-block"));
 		break;
 
@@ -89,6 +96,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube2->AddLocalOffset(FVector(0.f, 0.f, CubeHeight));
 		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, CubeHeight));
+
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, 0.5f, -0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, 1.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, -0.5f, -0.5f));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("2: S-block"));
 		break;
@@ -99,6 +110,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, CubeHeight));
 		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
 
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, 0.5f, -0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, 1.5f, -0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, -0.5f, 0.5f));
+
 		UE_LOG(LogFallingBlock, Display, TEXT("3: Z-block"));
 		break;
 
@@ -107,6 +122,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube2->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
 		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, -CubeHeight, -CubeHeight));
+
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, -0.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, 1.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, 1.5f, 1.5f));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("4: L-block"));
 		break;
@@ -117,6 +136,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube3->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, CubeHeight, -CubeHeight));
 
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, -0.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, 1.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, -0.5f, 1.5f));
+
 		UE_LOG(LogFallingBlock, Display, TEXT("5: J-block"));
 		break;
 
@@ -125,6 +148,10 @@ void ATP_FallingBlock::BeginPlay()
 		Cube2->AddLocalOffset(FVector(0.f, -CubeHeight, 0.f));
 		Cube3->AddLocalOffset(FVector(0.f, CubeHeight, 0.f));
 		Cube4->AddLocalOffset(FVector(0.f, 0.f, -CubeHeight));
+
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube2Midpoint", FVector(0.5f, 1.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube3Midpoint", FVector(0.5f, -0.5f, 0.5f));
+		DropNiagaraComponent->SetNiagaraVariableVec3("User.Cube4Midpoint", FVector(0.5f, 0.5f, 1.5f));
 
 		UE_LOG(LogFallingBlock, Display, TEXT("6: T-block"));
 		break;
@@ -139,14 +166,13 @@ void ATP_FallingBlock::BeginPlay()
 	Cube2->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 	Cube3->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
 	Cube4->SetVectorParameterValueOnMaterials("GlowColor", FVector(BlockColor));
-
-	//Cube1->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	//Cube2->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	//Cube3->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
-	//Cube4->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnComponentBeginOverlap);
+	DropNiagaraComponent->SetNiagaraVariableLinearColor("User.Color", BlockColor);
 
 	if (!bIsNextBlock)
 	{
+		DropNiagaraComponent->SetAsset(DropNiagaraEffect, false);
+		DropNiagaraComponent->SetActive(true, true);
+
 		GetWorldTimerManager().SetTimer(DropingBlockTimer, this, &ATP_FallingBlock::DropBlock, TimeToDropBlock, true);
 	}
 }
@@ -208,13 +234,11 @@ void ATP_FallingBlock::Rotate()
 
 void ATP_FallingBlock::Speed()
 {
-	//this->CustomTimeDilation = 5.f;
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 5.f);
 }
 
 void ATP_FallingBlock::StopSpeed()
 {
-	//this->CustomTimeDilation = 1.f;
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.f);
 }
 
@@ -250,15 +274,17 @@ void ATP_FallingBlock::DropBlock()
 			DefaultScene->GetChildrenComponents(false, Childrens);
 			for (auto Child : Childrens)
 			{
-				//UE_LOG(LogFallingBlock, Display, TEXT("Child"));
-
+				if (!Cast<UStaticMeshComponent>(Child))
+				{
+					UE_LOG(LogFallingBlock, Display, TEXT("continue"));
+					continue;
+				}
 				const FTransform SpawnTransform(FRotator::ZeroRotator, Child->GetComponentLocation(), FVector::OneVector);
 				FActorSpawnParameters SpawnParameters;
 				SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 				const auto SingleBlock = GetWorld()->SpawnActorDeferred<ATP_SingleBlock>(ATP_SingleBlock::StaticClass(), SpawnTransform); //ATP_SingleBlock::StaticClass()
 				if (SingleBlock)
 				{
-					SingleBlock->SetBlockColor(BlockColor);
 					SingleBlock->SetOwner(GetOwner());
 					SingleBlock->FinishSpawning(SpawnTransform);
 
@@ -266,12 +292,8 @@ void ATP_FallingBlock::DropBlock()
 				}
 			}
 
-			/*FRotator SpawnRotation = FRotator::ZeroRotator;
-			FActorSpawnParameters SpawnParameters;
-
-			auto NewFallingBlock = GetWorld()->SpawnActor<ATP_FallingBlock>(SpawnNewFallingBlockLocation, SpawnRotation, SpawnParameters);*/
-
-			OnTheBottom.Broadcast();
+			UE_LOG(LogFallingBlock, Display, TEXT("FallingBlock Last Location %s"), *GetActorLocation().ToString());
+			OnTheBottom.Broadcast(GetActorLocation());
 
 			Destroy();
 		}
