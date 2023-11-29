@@ -16,7 +16,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogCameraPawn, All, All);
 ATP_CameraPawn::ATP_CameraPawn()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	SetRootComponent(Camera);
@@ -41,8 +41,11 @@ void ATP_CameraPawn::BeginPlay()
 		if (GameMode)
 		{
 			GameMode->OnBlockStateChanged.AddUObject(this, &ATP_CameraPawn::OnSpawnNewFallingBlock);
+			GameMode->OnChangedLevel.AddUObject(this, &ATP_CameraPawn::OnChangedLevel);
 		}
 	}
+
+	CurrentTimeToDropBlock = TimeToDropBlock;
 }
 
 // Called every frame
@@ -53,36 +56,36 @@ void ATP_CameraPawn::Tick(float DeltaTime)
 }
 
 // Called to bind functionality to input
-void ATP_CameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-	ATP_PlayerController* PC = Cast<ATP_PlayerController>(Controller);
-	check(EIC && PC);
-
-	//EIC->BindAction(PC->MoveAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Move);
-
-	EIC->BindAction(PC->RotateAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Rotate);
-	EIC->BindAction(PC->RotateAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopRotate);
-
-	EIC->BindAction(PC->MoveRightAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::MoveRight);
-	EIC->BindAction(PC->MoveRightAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopMoveRight);
-
-	EIC->BindAction(PC->MoveLeftAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::MoveLeft);
-	EIC->BindAction(PC->MoveLeftAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopMoveLeft);
-
-	EIC->BindAction(PC->SpeedAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Speed);
-	EIC->BindAction(PC->SpeedAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopSpeed);
-	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
-	check(LocalPlayer);
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-	check(Subsystem);
-
-	Subsystem->ClearAllMappings();
-	Subsystem->AddMappingContext(PC->PawnMappingContext, 0);
-}
+//void ATP_CameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+//{
+//	Super::SetupPlayerInputComponent(PlayerInputComponent);
+//
+//	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+//	ATP_PlayerController* PC = Cast<ATP_PlayerController>(GetController());
+//	check(EIC && PC);
+//
+//	//EIC->BindAction(PC->MoveAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Move);
+//
+//	EIC->BindAction(PC->RotateAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Rotate);
+//	EIC->BindAction(PC->RotateAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopRotate);
+//
+//	EIC->BindAction(PC->MoveRightAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::MoveRight);
+//	EIC->BindAction(PC->MoveRightAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopMoveRight);
+//
+//	EIC->BindAction(PC->MoveLeftAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::MoveLeft);
+//	EIC->BindAction(PC->MoveLeftAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopMoveLeft);
+//
+//	EIC->BindAction(PC->SpeedAction, ETriggerEvent::Triggered, this, &ATP_CameraPawn::Speed);
+//	EIC->BindAction(PC->SpeedAction, ETriggerEvent::Completed, this, &ATP_CameraPawn::StopSpeed);
+//	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
+//	check(LocalPlayer);
+//
+//	UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+//	check(Subsystem);
+//
+//	Subsystem->ClearAllMappings();
+//	Subsystem->AddMappingContext(PC->PawnMappingContext, 0);
+//}
 
 //void ATP_CameraPawn::Move(const FInputActionValue& ActionValue)
 //{
@@ -142,11 +145,21 @@ void ATP_CameraPawn::OnSpawnNewFallingBlock(ETPBlockState State)
 		{
 			CurrentFallingBlock->SetBlockShapeNumber(CurrentBlockShapeNumber);
 			CurrentFallingBlock->SetIsNextBlock(false);
+			CurrentFallingBlock->SetTimeToDropBlock(CurrentTimeToDropBlock);
 			CurrentFallingBlock->SetOwner(GetOwner());
 			CurrentFallingBlock->FinishSpawning(CurrentFallingBlockSpawnTransform);
 
+			UE_LOG(LogCameraPawn, Display, TEXT("CurrentTimeToDropBlock %f"), CurrentTimeToDropBlock);
 			UE_LOG(LogCameraPawn, Display, TEXT("CurrentFallingBlock FinishSpawning"));
 		}
+
+		const auto GameMode = Cast<ATProjectGameModeBase>(GetWorld()->GetAuthGameMode());
+		if (!GameMode) return;
+
+		const auto PC = Cast<ATP_PlayerController>(GetController());
+		if (!PC) return;
+
+		GameMode->SetBlockCount(PC, CurrentBlockShapeNumber);
 
 		CurrentFallingBlock->OnTheBottom.AddUObject(this, &ATP_CameraPawn::OnTheBottom);
 
@@ -164,6 +177,15 @@ void ATP_CameraPawn::OnSpawnNewFallingBlock(ETPBlockState State)
 			UE_LOG(LogCameraPawn, Display, TEXT("NextFallingBlock FinishSpawning"));
 		}
 	}
+}
+
+void ATP_CameraPawn::OnChangedLevel()
+{
+	UE_LOG(LogCameraPawn, Display, TEXT("TimeToDropBlock %f"), CurrentTimeToDropBlock);
+
+	CurrentTimeToDropBlock -= DeltaTimeToDropBlock;
+
+	UE_LOG(LogCameraPawn, Display, TEXT("New TimeToDropBlock %f"), CurrentTimeToDropBlock);
 }
 
 void ATP_CameraPawn::Rotate()
@@ -199,8 +221,6 @@ void ATP_CameraPawn::Speed()
 	{
 		CurrentFallingBlock->Speed();
 		bIsSpeedOnce = !bIsSpeedOnce;
-
-		UE_LOG(LogCameraPawn, Display, TEXT("Speed"));
 	}
 }
 
@@ -234,7 +254,6 @@ void ATP_CameraPawn::StopSpeed()
 	{
 		CurrentFallingBlock->StopSpeed();
 		bIsSpeedOnce = !bIsSpeedOnce;
-		UE_LOG(LogCameraPawn, Display, TEXT("StopSpeed"));
 	}
 }
 
@@ -257,7 +276,7 @@ void ATP_CameraPawn::UniformDiscrete()
 	int32 seed = FMath::RandRange(0, m - 1);;
 	//UE_LOG(LogCameraPawn, Display, TEXT("Number seed %i"), seed);
 
-	for (int i = 0; i < 7; ++i)
+	for (int32 i = 0; i < 7; ++i)
 	{
 		seed = FMath::Abs((a * seed + c) % m);
 		int32 RandNumber = seed % 7;
@@ -267,15 +286,19 @@ void ATP_CameraPawn::UniformDiscrete()
 	
 }
 
-void ATP_CameraPawn::OnTheBottom()
+void ATP_CameraPawn::OnTheBottom(FVector CurrentLocation)
 {
-	if (GetWorld())
+	if (!GetWorld()) return;
+	const auto GameMode = Cast<ATProjectGameModeBase>(GetWorld()->GetAuthGameMode());
+	if (!GameMode) return;
+
+	if (CurrentLocation == SpawnCurrentFallingBlockLocation)
 	{
-		const auto GameMode = Cast<ATProjectGameModeBase>(GetWorld()->GetAuthGameMode());
-		if (GameMode)
-		{
-			GameMode->SetBlockState(ETPBlockState::BlockFalled);
-		}
+		GameMode->GameOver();
+	}
+	else
+	{
+		GameMode->SetBlockState(ETPBlockState::BlockFalled);
 	}
 }
 

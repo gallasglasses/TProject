@@ -26,7 +26,7 @@ protected:
 	virtual void BeginPlay() override; 
 
 	UPROPERTY(EditDefaultsOnly, Category = "Grid")
-		int GridBoxesAmount = 200;
+		int32 GridBoxesAmount = 200;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Grid")
 		FVector FirstBoxSpawnPoint = FVector(0.f, -225.f, 50.f);
@@ -50,9 +50,12 @@ private:
 
 	void ChangeGrid();
 
+	FTimerHandle ChangeGridTimer;
+
 	TArray<ATP_LineCheckBox*> BoxesGrid;
-	TArray<int> FulledRawsIndexes;
+	TArray<int32> FulledRawsIndexes;
 
 	FVector NextBoxSpawnPoint;
 
+	float TimeToChangeGrid = 1.f;
 };

@@ -8,6 +8,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogLineCheckBox, All, All);
 
@@ -23,6 +24,11 @@ ATP_LineCheckBox::ATP_LineCheckBox()
 	Box = CreateDefaultSubobject<UBoxComponent>("Box");
 	Box->SetupAttachment(DefaultScene);
 	Box->SetBoxExtent(BoxExtent);
+
+	DestroyNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>("DestroyNiagaraComponent");
+	DestroyNiagaraComponent->SetupAttachment(Box);
+
+	DestroyNiagaraEffect = LoadObject<UNiagaraSystem>(this, *DestroyNiagaraEffectPath);
 }
 
 // Called when the game starts or when spawned
@@ -36,11 +42,27 @@ void ATP_LineCheckBox::NotifyActorBeginOverlap(AActor* OtherActor)
 	Super::NotifyActorBeginOverlap(OtherActor);
 
 	const auto OverlapSingleBlock = Cast<ATP_SingleBlock>(OtherActor);
-	if (OverlapSingleBlock)
+	if (OverlapSingleBlock && SingleBLock != OverlapSingleBlock)
 	{
-		SingleBLock = OverlapSingleBlock;
-		bIsFulled = true;
-		UE_LOG(LogLineCheckBox, Display, TEXT("SingleBlock %s"), *SingleBLock->GetName());
+		if (OverlapSingleBlock->IsShiftingBlock())
+		{
+			if (IsBlockOnSpot(OverlapSingleBlock))
+			{
+				SingleBLock = OverlapSingleBlock;
+				SingleBLock->SetBLockIndex(BoxIndex);
+				bIsFulled = true;
+				UE_LOG(LogLineCheckBox, Display, TEXT("Shifting Block On Spot: "));
+				UE_LOG(LogLineCheckBox, Display, TEXT("BoxIndex %i | BLockIndex %i | SingleBlock %s"), BoxIndex, SingleBLock->GetBlockIndex(), *SingleBLock->GetName());
+			}
+		}
+		else
+		{
+			SingleBLock = OverlapSingleBlock;
+			SingleBLock->SetBLockIndex(BoxIndex);
+			bIsFulled = true;
+			UE_LOG(LogLineCheckBox, Display, TEXT("New Block On Spot: "));
+			UE_LOG(LogLineCheckBox, Display, TEXT("BoxIndex %i | BLockIndex %i | SingleBlock %s"), BoxIndex, SingleBLock->GetBlockIndex(), *SingleBLock->GetName());
+		}
 	}
 
 }
@@ -54,7 +76,7 @@ void ATP_LineCheckBox::Tick(float DeltaTime)
 
 void ATP_LineCheckBox::ShiftBlock()
 {
-	if (BlockShiftAmount != 0)
+	if (BlockShiftAmount != 0 && !bNeedDeleteBlock)
 	{
 		UE_LOG(LogLineCheckBox, Display, TEXT("=======OnShiftBlock======="));
 		UE_LOG(LogLineCheckBox, Display, TEXT("BoxIndex %i"), BoxIndex);
@@ -62,17 +84,20 @@ void ATP_LineCheckBox::ShiftBlock()
 		UE_LOG(LogLineCheckBox, Display, TEXT("bNeedDeleteBlock is %s"), bNeedDeleteBlock ? TEXT("TRUE") : TEXT("FALSE"));
 
 		UE_LOG(LogLineCheckBox, Display, TEXT("Need to shift block"));
-		
+
+		//SingleBLock->SetBLockIndex(BoxIndex);
 		SingleBLock->ShiftBlock(BlockShiftAmount);
+		
 		BlockShiftAmount = 0;
 		SingleBLock = nullptr;
+		bNeedDeleteBlock = false;
 		bIsFulled = false;
 	}
 }
 
 void ATP_LineCheckBox::DeleteBlock()
 {
-	if (bNeedDeleteBlock)
+	if (bNeedDeleteBlock && BlockShiftAmount == 0)
 	{
 		UE_LOG(LogLineCheckBox, Display, TEXT("=======OnDeleteBlock======="));
 		UE_LOG(LogLineCheckBox, Display, TEXT("BoxIndex %i"), BoxIndex);
@@ -80,12 +105,27 @@ void ATP_LineCheckBox::DeleteBlock()
 		UE_LOG(LogLineCheckBox, Display, TEXT("bNeedDeleteBlock is %s"), bNeedDeleteBlock ? TEXT("TRUE") : TEXT("FALSE"));
 
 		UE_LOG(LogLineCheckBox, Display, TEXT("Yes, Need delete line"));
-		
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEmitter, SingleBLock->GetActorLocation(), FRotator::ZeroRotator, true, EPSCPoolMethod::None, true);
-		SingleBLock->Destroy();
+
+		SingleBLock->DeleteBlock();
+		DestroyNiagaraComponent->SetAsset(DestroyNiagaraEffect, false);
+		DestroyNiagaraComponent->SetActive(true, true);
+		GetWorldTimerManager().SetTimer(DestroyBlockTimer, this, &ATP_LineCheckBox::DestroyBlock, TimeDestroyBlock, false);
+
+		BlockShiftAmount = 0;
 		SingleBLock = nullptr;
 		bNeedDeleteBlock = false;
 		bIsFulled = false;
 	}
+}
+
+bool ATP_LineCheckBox::IsBlockOnSpot(const ATP_SingleBlock* Block) const
+{
+	return Block->GetNewBlockIndex() == BoxIndex ? true : false;
+}
+
+void ATP_LineCheckBox::DestroyBlock()
+{
+	GetWorldTimerManager().ClearTimer(DestroyBlockTimer);
+	DestroyNiagaraComponent->SetActive(false, false);
 }
 

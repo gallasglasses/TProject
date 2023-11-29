@@ -45,7 +45,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	//virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	//void Move(const struct FInputActionValue& ActionValue);
 
@@ -55,14 +55,6 @@ public:
 	UPROPERTY(EditAnywhere)
 		float MoveScale;
 
-private:
-	
-	ATP_FallingBlock* CurrentFallingBlock;
-	ATP_FallingBlock* NextFallingBlock;
-
-	UFUNCTION()
-		void OnSpawnNewFallingBlock(ETPBlockState State);
-
 	void Rotate();
 	void MoveRight();
 	void MoveLeft();
@@ -71,10 +63,23 @@ private:
 	void StopMoveRight();
 	void StopMoveLeft();
 	void StopSpeed();
-	void UniformDiscrete();
-	void OnTheBottom();
 
-	TArray<int> BlockShapeNumbers;
+private:
+	
+	ATP_FallingBlock* CurrentFallingBlock;
+	ATP_FallingBlock* NextFallingBlock;
+
+	UFUNCTION()
+		void OnSpawnNewFallingBlock(ETPBlockState State);
+
+	UFUNCTION()
+		void OnChangedLevel();
+
+	
+	void UniformDiscrete();
+	void OnTheBottom(FVector CurrentLocation);
+
+	TArray<int32> BlockShapeNumbers;
 
 	bool bIsRotateOnce = false;
 	bool bIsMoveRightOnce = false;
@@ -82,7 +87,11 @@ private:
 	bool bIsSpeedOnce = false;
 	bool bIsFirstMove = true;
 
-	int CurrentBlockShapeNumber;
-	int NextBlockShapeNumber;
-	int CurrentMove = 0;
+	int32 CurrentBlockShapeNumber;
+	int32 NextBlockShapeNumber;
+	int32 CurrentMove = 0;
+
+	float TimeToDropBlock = 0.6f;
+	float DeltaTimeToDropBlock = 0.05f;
+	float CurrentTimeToDropBlock;
 };

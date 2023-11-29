@@ -27,6 +27,7 @@ class ATP_GridManager;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchStateChangedSignature, ETPMatchState);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnBlockStateChangedSignature, ETPBlockState);
+DECLARE_MULTICAST_DELEGATE(FOnChangedLevelSignature);
 
 
 UCLASS()
@@ -41,8 +42,16 @@ public:
 
 	FOnMatchStateChangedSignature OnMatchStateChanged;
 	FOnBlockStateChangedSignature OnBlockStateChanged;
+	FOnChangedLevelSignature OnChangedLevel;
 
 	void SetBlockState(ETPBlockState State);
+	void SetBlockCount(APlayerController* PC, int32 ShapeNumber);
+	void SetScore(APlayerController* PC, int32 Score);
+	void SetLines(APlayerController* PC, int32 Lines);
+	void GameOver();
+
+	virtual bool SetPause(APlayerController* PC, FCanUnpause CanUnpauseDelegate = FCanUnpause()) override;
+	virtual bool ClearPause() override;
 
 protected:
 

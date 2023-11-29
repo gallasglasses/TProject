@@ -9,10 +9,12 @@
 
 class USceneComponent;
 class UStaticMeshComponent;
+class UNiagaraComponent;
+class UNiagaraSystem;
 
 class ATP_SingleBlock;
 
-DECLARE_MULTICAST_DELEGATE(FOnTheBottom);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnTheBottom, FVector);
 
 UENUM(BlueprintType)
 enum class ETPBlockShape : uint8
@@ -56,19 +58,21 @@ protected:
 		UStaticMeshComponent* Cube4;
 
 	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
-		FVector SpawnNewFallingBlockLocation = FVector(0.f, 0.f, 1000.f);
+		FVector SpawnNewFallingBlockLocation = FVector(0.f, 0.f, 1050.f);
 
 	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
-		FVector BoxOverlapExtent = FVector(1.f, 1.f, 1.f);
+		FVector BoxOverlapExtent = FVector(10.f, 10.f, 10.f);
 
 	UPROPERTY(EditDeFaultsOnly, BlueprintReadWrite, category = "Components | Meshes")
 		float CubeHeight = 50.f;
 
-	/*UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block")
-		TSubclassOf<ATP_SingleBlock> SingleBlockClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components | VFX")
+		UNiagaraComponent* DropNiagaraComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block")
-		TSubclassOf<ATP_FallingBlock> NewFallingBlockClass;*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components | VFX")
+		UNiagaraSystem* DropNiagaraEffect;
+
+	const FString DropNiagaraEffectPath = "Niagara.NiagaraSystem'/Game/TProjectContent/FX/NS_DropCubeFX.NS_DropCubeFX'";
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block | Color")
 		TMap<ETPBlockShape, FLinearColor> BlockColors{
@@ -82,7 +86,7 @@ protected:
 		};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Block | Number")
-		TMap<int, ETPBlockShape> BlockNumbers{
+		TMap<int32, ETPBlockShape> BlockNumbers{
 			{ 0, ETPBlockShape::O_block },
 			{ 1, ETPBlockShape::I_block },
 			{ 2, ETPBlockShape::S_block },
@@ -108,8 +112,9 @@ public:
 
 	FOnTheBottom OnTheBottom;
 
-	void SetBlockShapeNumber(const int& Number) { BlockShapeNumber = Number; }
+	void SetBlockShapeNumber(const int32& Number) { BlockShapeNumber = Number; }
 	void SetIsNextBlock(const bool& IsNext) { bIsNextBlock = IsNext; }
+	void SetTimeToDropBlock(const float& Time) { TimeToDropBlock = Time; }
 
 	void Rotate();
 	void Speed();
@@ -122,8 +127,9 @@ private:
 	FTimerHandle DropingBlockTimer;
 	FLinearColor BlockColor;
 
-	int BlockShapeNumber;
-	float TimeToDropBlock = 0.5f;
+	int32 BlockShapeNumber;
+
+	float TimeToDropBlock;
 
 	bool bIsNextBlock = false;
 
